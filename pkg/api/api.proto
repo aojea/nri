@@ -230,6 +230,7 @@ message LinuxPodSandbox {
   string cgroups_path = 4; // for NRI v1 emulation
   repeated LinuxNamespace namespaces = 5; // for NRI v1 emulation
   LinuxResources resources = 6; // for NRI v1 emulation
+  repeated LinuxNetworkDevice netdevices = 7;
 }
 
 // Container metadata that is considered relevant for a plugin.
@@ -297,6 +298,21 @@ message LinuxContainer {
 message LinuxNamespace {
   string type = 1;
   string path = 2;
+}
+
+// A (linux) network device.
+// https://man7.org/linux/man-pages/man7/netdevice.7.html
+message LinuxNetworkDevice {
+  string name = 1; // Name of the network device on the host https://docs.kernel.org/networking/netdevices.html
+  string new_name = 2;
+  string addr = 3;
+  string netmask = 4;
+  string broadaddr = 5;
+  string hwaddr = 6;
+  int32 flags = 7;
+  int32 index = 8;
+  int32 metric = 9;
+  int32 mtu = 10;
 }
 
 // A container (linux) device.
