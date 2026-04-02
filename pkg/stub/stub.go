@@ -154,6 +154,24 @@ type ValidateContainerAdjustmentInterface interface {
 	ValidateContainerAdjustment(context.Context, *api.ValidateContainerAdjustmentRequest) error
 }
 
+// NetworkSetupInterface handles NetworkSetup API requests.
+type NetworkSetupInterface interface {
+	// NetworkSetup relays a NetworkSetup request to the plugin.
+	NetworkSetup(context.Context, *api.NetworkSetupRequest) (*api.NetworkSetupResponse, error)
+}
+
+// NetworkTeardownInterface handles NetworkTeardown API requests.
+type NetworkTeardownInterface interface {
+	// NetworkTeardown relays a NetworkTeardown request to the plugin.
+	NetworkTeardown(context.Context, *api.NetworkTeardownRequest) (*api.NetworkTeardownResponse, error)
+}
+
+// NetworkCheckInterface handles NetworkCheck API requests.
+type NetworkCheckInterface interface {
+	// NetworkCheck relays a NetworkCheck request to the plugin.
+	NetworkCheck(context.Context, *api.NetworkCheckRequest) (*api.NetworkCheckResponse, error)
+}
+
 // Stub is the interface the stub provides for the plugin implementation.
 type Stub interface {
 	// Run starts the plugin then waits for the plugin service to exit, either due to a
@@ -334,6 +352,9 @@ type handlers struct {
 	PostStartContainer          func(context.Context, *api.PodSandbox, *api.Container) error
 	PostUpdateContainer         func(context.Context, *api.PodSandbox, *api.Container) error
 	ValidateContainerAdjustment func(context.Context, *api.ValidateContainerAdjustmentRequest) error
+	NetworkSetup                func(context.Context, *api.NetworkSetupRequest) (*api.NetworkSetupResponse, error)
+	NetworkTeardown             func(context.Context, *api.NetworkTeardownRequest) (*api.NetworkTeardownResponse, error)
+	NetworkCheck                func(context.Context, *api.NetworkCheckRequest) (*api.NetworkCheckResponse, error)
 }
 
 // New creates a stub with the given plugin and options.
@@ -820,6 +841,33 @@ func (stub *stub) UpdatePodSandbox(ctx context.Context, req *api.UpdatePodSandbo
 	return &api.UpdatePodSandboxResponse{}, err
 }
 
+// NetworkSetup request handler.
+func (stub *stub) NetworkSetup(ctx context.Context, req *api.NetworkSetupRequest) (*api.NetworkSetupResponse, error) {
+	handler := stub.handlers.NetworkSetup
+	if handler == nil {
+		return &api.NetworkSetupResponse{}, nil
+	}
+	return handler(ctx, req)
+}
+
+// NetworkTeardown request handler.
+func (stub *stub) NetworkTeardown(ctx context.Context, req *api.NetworkTeardownRequest) (*api.NetworkTeardownResponse, error) {
+	handler := stub.handlers.NetworkTeardown
+	if handler == nil {
+		return &api.NetworkTeardownResponse{}, nil
+	}
+	return handler(ctx, req)
+}
+
+// NetworkCheck request handler.
+func (stub *stub) NetworkCheck(ctx context.Context, req *api.NetworkCheckRequest) (*api.NetworkCheckResponse, error) {
+	handler := stub.handlers.NetworkCheck
+	if handler == nil {
+		return &api.NetworkCheckResponse{Healthy: true}, nil
+	}
+	return handler(ctx, req)
+}
+
 // StateChange event handler.
 func (stub *stub) StateChange(ctx context.Context, evt *api.StateChangeEvent) (*api.Empty, error) {
 	var err error
@@ -970,6 +1018,15 @@ func (stub *stub) setupHandlers() error {
 	if plugin, ok := stub.plugin.(ValidateContainerAdjustmentInterface); ok {
 		stub.handlers.ValidateContainerAdjustment = plugin.ValidateContainerAdjustment
 		stub.events.Set(api.Event_VALIDATE_CONTAINER_ADJUSTMENT)
+	}
+	if plugin, ok := stub.plugin.(NetworkSetupInterface); ok {
+		stub.handlers.NetworkSetup = plugin.NetworkSetup
+	}
+	if plugin, ok := stub.plugin.(NetworkTeardownInterface); ok {
+		stub.handlers.NetworkTeardown = plugin.NetworkTeardown
+	}
+	if plugin, ok := stub.plugin.(NetworkCheckInterface); ok {
+		stub.handlers.NetworkCheck = plugin.NetworkCheck
 	}
 
 	if stub.events == 0 {

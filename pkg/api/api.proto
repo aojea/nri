@@ -106,6 +106,24 @@ service Plugin {
   // UpdatePodSandbox relays the corresponding request to the plugin.
   rpc UpdatePodSandbox(UpdatePodSandboxRequest) returns (UpdatePodSandboxResponse);
 
+  // NetworkSetup is called sequentially on registered plugins after the Pod
+  // network namespace is created, but before any containers (including the
+  // sandbox container) are started. For HostNetwork pods this hook must not be
+  // called. Setup is a pipeline: each plugin gets current_interfaces from
+  // previously executed plugins and returns the updated accumulated state.
+  rpc NetworkSetup(NetworkSetupRequest) returns (NetworkSetupResponse);
+
+  // NetworkTeardown is called sequentially in reverse order during Pod deletion,
+  // before the network namespace is destroyed. For HostNetwork pods this hook
+  // must not be called. If setup fails, runtimes roll back by invoking teardown
+  // in reverse order with the safe accumulated state up to the failure point.
+  // Plugins must implement teardown idempotently.
+  rpc NetworkTeardown(NetworkTeardownRequest) returns (NetworkTeardownResponse);
+
+  // NetworkCheck is an active polling hook used to verify the granular health
+  // and consistency of the network setup (routes, IPs, MACs).
+  rpc NetworkCheck(NetworkCheckRequest) returns (NetworkCheckResponse);
+
   // StateChange relays any remaining pod or container lifecycle/state change
   // events the plugin has subscribed for. These can be used to trigger any
   // plugin-specific processing which needs to occur in connection with any of
@@ -769,3 +787,77 @@ enum Field {
     RdtEnableMonitoring = 39;
     MemoryPolicy = 40;
 }
+
+  // --- Network Lifecycle Hooks ---
+
+  message NetworkSetupRequest {
+    // The sandbox ID. Network hooks operate at the Pod boundary, not the
+    // container boundary.
+    string pod_sandbox_id = 1;
+    string netns_path = 2;
+
+    // Pod annotations passed down from CRI.
+    // Essential for dynamic triggers (for example Service Mesh injection
+    // without mutating disk files).
+    map<string, string> annotations = 3;
+
+    // Accumulated state from previous plugins in the setup pipeline.
+    repeated NetworkInterface current_interfaces = 4;
+  }
+
+  message NetworkSetupResponse {
+    // The plugin returns the total updated state of interfaces.
+    repeated NetworkInterface interfaces = 1;
+  }
+
+  message NetworkTeardownRequest {
+    string pod_sandbox_id = 1;
+    string netns_path = 2;
+    map<string, string> annotations = 3;
+
+    // If teardown is triggered due to rollback, this contains the safe
+    // accumulated state of interfaces created prior to the failure.
+    repeated NetworkInterface current_interfaces = 4;
+  }
+
+  message NetworkTeardownResponse {
+    // Empty acknowledgment. Plugins must implement teardown idempotently.
+  }
+
+  message NetworkCheckRequest {
+    string pod_sandbox_id = 1;
+    string netns_path = 2;
+    repeated NetworkInterface expected_interfaces = 3;
+  }
+
+  message NetworkCheckResponse {
+    bool healthy = 1;
+    string reason = 2;
+  }
+
+  // --- Core Network State Schema ---
+
+  message NetworkInterface {
+    // The name of the interface created on the host network namespace
+    // (for example "veth-pod-1"). The plugin creates this locally on the host.
+    string host_interface_name = 1;
+
+    // The desired name of the interface inside the pod (for example "eth0").
+    // Runtimes use this mapping to populate the OCI LinuxNetDevice spec,
+    // allowing runc/crun to move the interface without plugin nsenter
+    // privileges.
+    string container_interface_name = 2;
+
+    string mac_address = 3;
+    repeated string ips = 4;
+    repeated Route routes = 5;
+
+    // Allows plugins to attach opaque data, hardware offload tokens, or eBPF
+    // map pins that subsequent plugins might need in the chain.
+    map<string, string> extension_attributes = 6;
+  }
+
+  message Route {
+    string destination = 1;
+    string gateway = 2;
+  }

@@ -78,6 +78,21 @@ type Plugin interface {
 	StopContainer(context.Context, *StopContainerRequest) (*StopContainerResponse, error)
 	// UpdatePodSandbox relays the corresponding request to the plugin.
 	UpdatePodSandbox(context.Context, *UpdatePodSandboxRequest) (*UpdatePodSandboxResponse, error)
+	// NetworkSetup is called sequentially on registered plugins after the Pod
+	// network namespace is created, but before any containers (including the
+	// sandbox container) are started. For HostNetwork pods this hook must not be
+	// called. Setup is a pipeline: each plugin gets current_interfaces from
+	// previously executed plugins and returns the updated accumulated state.
+	NetworkSetup(context.Context, *NetworkSetupRequest) (*NetworkSetupResponse, error)
+	// NetworkTeardown is called sequentially in reverse order during Pod deletion,
+	// before the network namespace is destroyed. For HostNetwork pods this hook
+	// must not be called. If setup fails, runtimes roll back by invoking teardown
+	// in reverse order with the safe accumulated state up to the failure point.
+	// Plugins must implement teardown idempotently.
+	NetworkTeardown(context.Context, *NetworkTeardownRequest) (*NetworkTeardownResponse, error)
+	// NetworkCheck is an active polling hook used to verify the granular health
+	// and consistency of the network setup (routes, IPs, MACs).
+	NetworkCheck(context.Context, *NetworkCheckRequest) (*NetworkCheckResponse, error)
 	// StateChange relays any remaining pod or container lifecycle/state change
 	// events the plugin has subscribed for. These can be used to trigger any
 	// plugin-specific processing which needs to occur in connection with any of

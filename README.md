@@ -121,6 +121,9 @@ subscription.
 
 ### Pod Data and Available Lifecycle Events
 
+For pod-scoped network lifecycle semantics and OCI LinuxNetDevice composability,
+see [NRI Network Lifecycle Hooks](docs/network-lifecycle-hooks.md).
+
 <details>
 <summary>NRI Pod Lifecycle Events</summary>
 <p align="center">

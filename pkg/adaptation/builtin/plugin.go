@@ -53,6 +53,9 @@ type BuiltinHandlers struct {
 	StopContainer               func(context.Context, *api.StopContainerRequest) (*api.StopContainerResponse, error)
 	RemoveContainer             func(context.Context, *api.RemoveContainerRequest) error
 	ValidateContainerAdjustment func(context.Context, *api.ValidateContainerAdjustmentRequest) error
+	NetworkSetup                func(context.Context, *api.NetworkSetupRequest) (*api.NetworkSetupResponse, error)
+	NetworkTeardown             func(context.Context, *api.NetworkTeardownRequest) (*api.NetworkTeardownResponse, error)
+	NetworkCheck                func(context.Context, *api.NetworkCheckRequest) (*api.NetworkCheckResponse, error)
 }
 
 // Configure implements PluginService of the NRI API.
@@ -202,6 +205,30 @@ func (b *BuiltinPlugin) UpdatePodSandbox(ctx context.Context, req *api.UpdatePod
 		return b.Handlers.UpdatePodSandbox(ctx, req)
 	}
 	return &api.UpdatePodSandboxResponse{}, nil
+}
+
+// NetworkSetup implements PluginService of the NRI API.
+func (b *BuiltinPlugin) NetworkSetup(ctx context.Context, req *api.NetworkSetupRequest) (*api.NetworkSetupResponse, error) {
+	if b.Handlers.NetworkSetup != nil {
+		return b.Handlers.NetworkSetup(ctx, req)
+	}
+	return &api.NetworkSetupResponse{}, nil
+}
+
+// NetworkTeardown implements PluginService of the NRI API.
+func (b *BuiltinPlugin) NetworkTeardown(ctx context.Context, req *api.NetworkTeardownRequest) (*api.NetworkTeardownResponse, error) {
+	if b.Handlers.NetworkTeardown != nil {
+		return b.Handlers.NetworkTeardown(ctx, req)
+	}
+	return &api.NetworkTeardownResponse{}, nil
+}
+
+// NetworkCheck implements PluginService of the NRI API.
+func (b *BuiltinPlugin) NetworkCheck(ctx context.Context, req *api.NetworkCheckRequest) (*api.NetworkCheckResponse, error) {
+	if b.Handlers.NetworkCheck != nil {
+		return b.Handlers.NetworkCheck(ctx, req)
+	}
+	return &api.NetworkCheckResponse{Healthy: true}, nil
 }
 
 // PostUpdatePodSandbox is a handler for the PostUpdatePodSandbox event.

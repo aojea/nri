@@ -69,6 +69,9 @@ type PluginService interface {
 	UpdateContainer(context.Context, *UpdateContainerRequest) (*UpdateContainerResponse, error)
 	StopContainer(context.Context, *StopContainerRequest) (*StopContainerResponse, error)
 	UpdatePodSandbox(context.Context, *UpdatePodSandboxRequest) (*UpdatePodSandboxResponse, error)
+	NetworkSetup(context.Context, *NetworkSetupRequest) (*NetworkSetupResponse, error)
+	NetworkTeardown(context.Context, *NetworkTeardownRequest) (*NetworkTeardownResponse, error)
+	NetworkCheck(context.Context, *NetworkCheckRequest) (*NetworkCheckResponse, error)
 	StateChange(context.Context, *StateChangeEvent) (*Empty, error)
 	ValidateContainerAdjustment(context.Context, *ValidateContainerAdjustmentRequest) (*ValidateContainerAdjustmentResponse, error)
 }
@@ -124,6 +127,27 @@ func RegisterPluginService(srv *ttrpc.Server, svc PluginService) {
 					return nil, err
 				}
 				return svc.UpdatePodSandbox(ctx, &req)
+			},
+			"NetworkSetup": func(ctx context.Context, unmarshal func(interface{}) error) (interface{}, error) {
+				var req NetworkSetupRequest
+				if err := unmarshal(&req); err != nil {
+					return nil, err
+				}
+				return svc.NetworkSetup(ctx, &req)
+			},
+			"NetworkTeardown": func(ctx context.Context, unmarshal func(interface{}) error) (interface{}, error) {
+				var req NetworkTeardownRequest
+				if err := unmarshal(&req); err != nil {
+					return nil, err
+				}
+				return svc.NetworkTeardown(ctx, &req)
+			},
+			"NetworkCheck": func(ctx context.Context, unmarshal func(interface{}) error) (interface{}, error) {
+				var req NetworkCheckRequest
+				if err := unmarshal(&req); err != nil {
+					return nil, err
+				}
+				return svc.NetworkCheck(ctx, &req)
 			},
 			"StateChange": func(ctx context.Context, unmarshal func(interface{}) error) (interface{}, error) {
 				var req StateChangeEvent
@@ -204,6 +228,30 @@ func (c *pluginClient) StopContainer(ctx context.Context, req *StopContainerRequ
 func (c *pluginClient) UpdatePodSandbox(ctx context.Context, req *UpdatePodSandboxRequest) (*UpdatePodSandboxResponse, error) {
 	var resp UpdatePodSandboxResponse
 	if err := c.client.Call(ctx, "nri.pkg.api.v1alpha1.Plugin", "UpdatePodSandbox", req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+func (c *pluginClient) NetworkSetup(ctx context.Context, req *NetworkSetupRequest) (*NetworkSetupResponse, error) {
+	var resp NetworkSetupResponse
+	if err := c.client.Call(ctx, "nri.pkg.api.v1alpha1.Plugin", "NetworkSetup", req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+func (c *pluginClient) NetworkTeardown(ctx context.Context, req *NetworkTeardownRequest) (*NetworkTeardownResponse, error) {
+	var resp NetworkTeardownResponse
+	if err := c.client.Call(ctx, "nri.pkg.api.v1alpha1.Plugin", "NetworkTeardown", req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+func (c *pluginClient) NetworkCheck(ctx context.Context, req *NetworkCheckRequest) (*NetworkCheckResponse, error) {
+	var resp NetworkCheckResponse
+	if err := c.client.Call(ctx, "nri.pkg.api.v1alpha1.Plugin", "NetworkCheck", req, &resp); err != nil {
 		return nil, err
 	}
 	return &resp, nil

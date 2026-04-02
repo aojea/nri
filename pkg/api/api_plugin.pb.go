@@ -210,6 +210,78 @@ func _plugin_update_pod_sandbox(ptr, size uint32) uint64 {
 	return (uint64(ptr) << uint64(32)) | uint64(size)
 }
 
+//go:wasmexport plugin_network_setup
+func _plugin_network_setup(ptr, size uint32) uint64 {
+	b := wasm.PtrToByte(ptr, size)
+	req := new(NetworkSetupRequest)
+	if err := req.UnmarshalVT(b); err != nil {
+		return 0
+	}
+	response, err := plugin.NetworkSetup(context.Background(), req)
+	if err != nil {
+		ptr, size = wasm.ByteToPtr([]byte(err.Error()))
+		return (uint64(ptr) << uint64(32)) | uint64(size) |
+			// Indicate that this is the error string by setting the 32-th bit, assuming that
+			// no data exceeds 31-bit size (2 GiB).
+			(1 << 31)
+	}
+
+	b, err = response.MarshalVT()
+	if err != nil {
+		return 0
+	}
+	ptr, size = wasm.ByteToPtr(b)
+	return (uint64(ptr) << uint64(32)) | uint64(size)
+}
+
+//go:wasmexport plugin_network_teardown
+func _plugin_network_teardown(ptr, size uint32) uint64 {
+	b := wasm.PtrToByte(ptr, size)
+	req := new(NetworkTeardownRequest)
+	if err := req.UnmarshalVT(b); err != nil {
+		return 0
+	}
+	response, err := plugin.NetworkTeardown(context.Background(), req)
+	if err != nil {
+		ptr, size = wasm.ByteToPtr([]byte(err.Error()))
+		return (uint64(ptr) << uint64(32)) | uint64(size) |
+			// Indicate that this is the error string by setting the 32-th bit, assuming that
+			// no data exceeds 31-bit size (2 GiB).
+			(1 << 31)
+	}
+
+	b, err = response.MarshalVT()
+	if err != nil {
+		return 0
+	}
+	ptr, size = wasm.ByteToPtr(b)
+	return (uint64(ptr) << uint64(32)) | uint64(size)
+}
+
+//go:wasmexport plugin_network_check
+func _plugin_network_check(ptr, size uint32) uint64 {
+	b := wasm.PtrToByte(ptr, size)
+	req := new(NetworkCheckRequest)
+	if err := req.UnmarshalVT(b); err != nil {
+		return 0
+	}
+	response, err := plugin.NetworkCheck(context.Background(), req)
+	if err != nil {
+		ptr, size = wasm.ByteToPtr([]byte(err.Error()))
+		return (uint64(ptr) << uint64(32)) | uint64(size) |
+			// Indicate that this is the error string by setting the 32-th bit, assuming that
+			// no data exceeds 31-bit size (2 GiB).
+			(1 << 31)
+	}
+
+	b, err = response.MarshalVT()
+	if err != nil {
+		return 0
+	}
+	ptr, size = wasm.ByteToPtr(b)
+	return (uint64(ptr) << uint64(32)) | uint64(size)
+}
+
 //go:wasmexport plugin_state_change
 func _plugin_state_change(ptr, size uint32) uint64 {
 	b := wasm.PtrToByte(ptr, size)
