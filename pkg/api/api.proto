@@ -183,6 +183,36 @@ message ConfigureResponse {
   // Events to subscribe the plugin for. Each bit set corresponds to an
   // enumerated Event.
   int32 events = 2;
+  // How the runtime handles a failure of the plugin to process a request.
+  // If unset, every field takes its default value, which matches how NRI
+  // handled such failures before this field existed.
+  FailurePolicy failure_policy = 3;
+}
+
+// FailurePolicy specifies how the runtime handles a failure of the plugin
+// to process a request: a request timeout, a lost connection or a protocol
+// error. It does not apply to errors returned by the plugin, those always
+// fail the request.
+//
+// The runtime takes two independent decisions for each such failure, one
+// about the request and one about the plugin. The default value of each
+// field is the historical NRI behavior, so a plugin which leaves the policy
+// unset is treated exactly as before: it is disconnected and the request
+// proceeds without it.
+message FailurePolicy {
+  // Fail the request with an error identifying the plugin and the request,
+  // like an error returned by the plugin. The remaining plugins are not
+  // invoked for the request. By default, the request proceeds with the
+  // remaining plugins as if the plugin had not been subscribed to it.
+  bool fail_request = 1;
+  // Keep the plugin registered when it exceeds the request timeout. It
+  // keeps receiving subsequent requests, so a plugin which stays
+  // unresponsive delays every request it is subscribed to by the timeout.
+  // By default, a plugin exceeding the request timeout is disconnected and
+  // unregistered. This only applies to request timeouts: a plugin whose
+  // connection is lost or fails with a protocol error is always
+  // disconnected, as there is nothing left to keep.
+  bool keep_connected = 2;
 }
 
 message SynchronizeRequest {

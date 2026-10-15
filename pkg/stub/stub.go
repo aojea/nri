@@ -283,6 +283,29 @@ func WithLogger(logger nrilog.Logger) Option {
 	}
 }
 
+// WithFailurePolicy sets how the runtime should handle a failure of the
+// plugin to process a request (a request timeout, a lost connection or a
+// protocol error). The policy takes two independent decisions, each of
+// which defaults to the historical NRI behavior:
+//
+//   - FailRequest: fail the request with an error, instead of letting it
+//     proceed without the plugin.
+//   - KeepConnected: keep the plugin registered when it exceeds the request
+//     timeout, instead of disconnecting it. A plugin whose connection is
+//     lost is always disconnected.
+//
+// Errors returned by the plugin itself always fail the request. Runtimes
+// using an NRI version without failure policy support ignore this setting.
+func WithFailurePolicy(policy *api.FailurePolicy) Option {
+	return func(s *stub) error {
+		if policy == nil {
+			return fmt.Errorf("nil failure policy")
+		}
+		s.failurePolicy = policy
+		return nil
+	}
+}
+
 // stub implements Stub.
 type stub struct {
 	sync.Mutex
@@ -310,6 +333,7 @@ type stub struct {
 
 	registrationTimeout time.Duration
 	requestTimeout      time.Duration
+	failurePolicy       *api.FailurePolicy
 	runtimeNRIVersion   string
 	pluginNRIVersion    string
 	logger              nrilog.Logger
@@ -709,7 +733,8 @@ func (stub *stub) Configure(ctx context.Context, req *api.ConfigureRequest) (rpl
 	}
 
 	return &api.ConfigureResponse{
-		Events: int32(events),
+		Events:        int32(events),
+		FailurePolicy: stub.failurePolicy,
 	}, nil
 }
 
